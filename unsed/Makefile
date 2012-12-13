@@ -7,4 +7,4 @@ readlines-main.o:
         gcc -c readlines-main.c
        
 readlines.o:
-        gcc -c readlines.o
+        gcc -c readlines.c
