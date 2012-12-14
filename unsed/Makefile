@@ -1,10 +1,21 @@
 all: readlines-main
- 
+
+all-shared: readlines-shared 
+
 readlines-main: readlines-main.o readlines.o
-        gcc readlines-main.o readlines.o -o readlines-main
+    gcc readlines-main.o readlines.o -o readlines-main
+ 
+readlines-shared: readlines-main.o readlines-shared.o
+    gcc readlines-main.o readlines-shared.o -o readlines-main
  
 readlines-main.o:
-        gcc -c readlines-main.c
+    gcc -c readlines-main.c
        
 readlines.o:
-        gcc -c readlines.c
+    gcc -c readlines.c
+        
+readlines-shared.o:
+    gcc -c -fPIC readlines.c -o readlines-shared.o
+        
+clean:
+    rm -rf *.o readlines-main
