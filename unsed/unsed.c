@@ -11,7 +11,7 @@ char* parse_pattern(char* str, char* pattern, int greedy){
 	int options = 0;
 	const char* error;
 	int erroffset;
-	//re = pcre_compile(pattern, options, &error, &erroffset, NULL);
+	re = pcre_compile(pattern, options, &error, &erroffset, NULL);
 	if (!re){
 		printf("RE compilation failed");
 		return NULL;
