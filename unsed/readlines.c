@@ -1,6 +1,6 @@
 #include "readlines.h"
  
-#define BUFSIZE 50
+#define BUFSIZE 256
  
 struct RL* rl_open(int fd, size_t max_size){
         struct RL* rl = malloc(sizeof(struct RL));
