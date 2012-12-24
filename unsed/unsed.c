@@ -5,10 +5,11 @@
 #include <string.h>
 
 #define MAX_LEN 256
+#define BUFFER_LEN 4*MAX_LEN
 
 char* parse_pattern(char* str, char* pattern, char* repl, int greedy){
 	pcre* re;
-	int options = 0;
+	int options = PCRE_UTF8;
 	const char* error;
 	int erroffset;
 	re = pcre_compile(pattern, options, &error, &erroffset, NULL);
@@ -18,16 +19,35 @@ char* parse_pattern(char* str, char* pattern, char* repl, int greedy){
 	}
 	int count = 0;
 	int ovector[30];
-	count = pcre_exec(re, NULL, str, strlen(str)+1, 0, NULL, ovector, 30);
-	//printf("%d\n",count);
-	//printf("%s+%s\n",str,repl);
-	if (ovector[0] < 0){
-		printf("No match\n");
-		return str;
-	} 	
-	
-	printf("~~~\n%s%d\n%s\n",str,ovector[0],repl);
-	
+
+    int offset = 0;
+    char* buf;
+    int strpos = 0;
+    int bufpos = 0;
+    buf = malloc(BUFFER_LEN);
+    memset(buf, 0, BUFFER_LEN);
+	//courtesy of dedoz
+	while((offset < strlen(str)) && (count = pcre_exec(re,NULL, str, strlen(str), offset, 0, ovector, 30) >= 0)){
+        int i;
+        strncat(&buf[bufpos], &str[strpos], ovector[0] - strpos);
+        bufpos += ovector[0] - strpos;
+        strpos = ovector[1];
+        strncat(&buf[bufpos], repl, strlen(repl));
+        bufpos += strlen(repl);
+        offset = ovector[1];
+        if(!greedy)
+        {
+			//free(str);
+			//str = buf;
+			//write(1, str, strlen(str));
+            return buf;
+		}
+    }
+    strncat(&buf[bufpos], &str[strpos], strlen(str) - strpos+1);
+			//free(str);
+			//str = buf;
+			
+    return buf;
 }
 
 int main(int argc, char *argv[]){
@@ -35,7 +55,7 @@ int main(int argc, char *argv[]){
 		printf("No pattern\n");
 		return -1;
 	}
-	struct RL* rl = rl_open(1,MAX_LEN);
+	struct RL* rl = rl_open(0,MAX_LEN);
 	int i;
 	char** patterns = malloc((argc-1)*sizeof(char*));
 	char** repls = malloc((argc-1)*sizeof(char*));
@@ -63,9 +83,13 @@ int main(int argc, char *argv[]){
 			strcpy(str,rl->buf);
 			//printf("%s+%s\n", str,repls[i]);
 			for (i = 0; i < argc-1; i++){
-				parse_pattern(str,patterns[i],repls[i],greeds[i]);
+				//if (parse_pattern(str,patterns[i],repls[i],greeds[i]) == NULL){
+				//	printf("NO FUCK YOU");
+				//}
+				str = parse_pattern(str,patterns[i],repls[i],greeds[i]);
 			}
-			
+			write(1,str,strlen(str));
+			write(1,"\n",1);
 			free(str);
 		} else {
 			break;
