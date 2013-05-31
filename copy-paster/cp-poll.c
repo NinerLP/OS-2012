@@ -22,33 +22,33 @@ int main(int argc, const char* argv[] ) {
 	printf("%d\n", num);
 	struct pollfd* fds =(struct pollfd*)malloc(sizeof(struct pollfd)*num*2);
 	int i;
-	for (i = 1; i <= num; i++) {
-		fds[2*i-1].fd = atoi(argv[2*i-1]);
-		fds[2*i-1].events = POLLOUT;
-		fds[2*i].fd = atoi(argv[2*i]);
+	for (i = 0; i < num; i++) {
+		fds[2*i].fd = atoi(argv[2*i+1]);
 		fds[2*i].events = POLLIN;
-		printf("From fd %d to %d\n", fds[2*i-1].fd, fds[2*i].fd);
+		fds[2*i+1].fd = atoi(argv[2*i+2]);
+		fds[2*i+1].events = POLLOUT;
+		printf("From fd %d to %d\n", fds[2*i].fd, fds[2*i+1].fd);
 	}
 	int parsed = 0;
 	int res;
 	while (parsed < num) {
-		res = poll(fds,num*2,1000);
+		res = poll(fds,num*2,-1);
 		if (res < 0) {
 			//error
 		} else {
-			printf("Dun gufed %d\n", res);
-			for (i = 1; i <= num; i++) {
-				if (fds[2*i-1].revents) {
-					printf("fD %d rdy\n", fds[2*i-1].fd);
-				}
-				if (fds[2*i].revents) {
-					printf("fD %d rdy\n", fds[2*i].fd);
-				}
-				if ((fds[2*i-1].revents & POLLOUT) && (fds[2*i].revents & POLLIN)) {
-					fstat(fds[2*i-1].fd,buf);
-					sendfile(fds[2*i-1].fd,fds[2*i].fd, NULL, buf->st_size);
-					fds[2*i-1].events = 0;
+			//printf("Dun gufed %d\n", res);
+			for (i = 0; i < num; i++) {
+			//	if (fds[2*i].revents) {
+			//		printf("fD %d rdy\n", fds[2*i-1].fd);
+			//	}
+			//	if (fds[2*i+1].revents) {
+			//		printf("fD %d rdy\n", fds[2*i].fd);
+			//	}
+				if ((fds[2*i].revents & POLLIN) && (fds[2*i+1].revents & POLLOUT)) {
+					fstat(fds[2*i].fd,buf);
+					sendfile(fds[2*i+1].fd,fds[2*i].fd, NULL, buf->st_size);
 					fds[2*i].events = 0;
+					fds[2*i+1].events = 0;
 					parsed++;
 				}
 			}
