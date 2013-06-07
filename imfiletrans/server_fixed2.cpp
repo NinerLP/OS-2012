@@ -152,16 +152,16 @@ int main() {
     }
     
     int fd = -1;
+    vector<bool> send(fds.size());
+    vector<int> ids(fds.size());
+    vector<int> op(fds.size()); //0 - accept, 1 - first read, 2 - rotating
+    char buf[5];
     vector<pollfd> pollfds(fds.size());
     for (int i = 0; i < pollfds.size(); i++) {
 	pollfds[i].fd = fds[i];
 	pollfds[i].events = POLLIN | POLLERR | POLLHUP | POLLRDHUP | POLLNVAL;
 	pollfds[i].revents = 0;
     }
-	vector<pollfd> accfds;
-	vector<bool> send;
-	vector<int> ids;
-	char buf[5];
 	
     while (true) {
 	int ret = poll(pollfds.data(), pollfds.size(), 1);
@@ -172,92 +172,87 @@ int main() {
 	}
 	if (ret > 0) {
 	    for (int i = 0; i < pollfds.size(); i++) {
-	        if (pollfds[i].revents & (POLLERR | POLLHUP | POLLRDHUP | POLLNVAL)) {
-	    	    perror("listen error");
-	    	    exit(1);
-	        }
-	        if (pollfds[i].revents & POLLIN) {
-		    int cfd = accept(fds[i], NULL, NULL);
-		    if (cfd < 0) {
-		        perror("fd < 0");
-		        continue;
+		if (op[i] == 0) {
+	            if (pollfds[i].revents & (POLLERR | POLLHUP | POLLRDHUP | POLLNVAL)) {
+	    	        perror("listen error");
+	    	        exit(1);
+	            }
+	            if (pollfds[i].revents & POLLIN) {
+		        int cfd = accept(fds[i], NULL, NULL);
+		        if (cfd < 0) {
+		            perror("fd < 0");
+		            continue;
+		        }
+			pollfds.push_back(pollfd());
+			pollfds.back().fd = cfd;
+			pollfds.back().events = POLLIN;
+			pollfds.back().revents = 0;
+			op.push_back(1);
+			ids.push_back(-1);
 		    }
-		    read(cfd,&buf,5);
-		    printf("%s\n", buf);
-		    if (!strcmp(buf,"send\0")) {
-		        printf("sender connected\n");
-		        accfds.push_back(pollfd());
-		        accfds.back().fd = cfd;
-		        accfds.back().events = POLLIN | POLLERR;
-		        accfds.back().revents = 0;
-		        int bid = CURR_ID; 
-		        CURR_ID++;
-		        char idBUF[10];
-		        sprintf(idBUF, "%d\n", bid);
-		        write(cfd, idBUF,strlen(idBUF));
-		        buffer *senderBuffer = new buffer;
-		        buffs[bid] = senderBuffer;
-		        ids.push_back(bid);
-		        send.push_back(true);
-		    } else if (!strcmp(buf, "recv\0")) {
-		        printf("receiver connected\n");
-		        accfds.push_back(pollfd());
-		        accfds.back().fd = cfd;
-		        accfds.back().events = POLLOUT | POLLERR;
-		        accfds.back().revents = 0;
-		        read(cfd, &buf, 4);
-			printf("%s\n", buf);
-		        int id = atoi(buf);
-		        ids.push_back(id);
-		        send.push_back(false);
-		    } else {
-		        perror("wrong connection target");
+		} else if (op[i] == 1) {
+		    if (pollfds[i].revents & POLLIN) {
+
+    		        read(pollfds[i].fd,&buf,5);
+		        printf("%s\n", buf);
+		        if (!strcmp(buf,"send\0")) {
+		            printf("sender connected\n");
+		            pollfds.push_back(pollfd());
+		            pollfds.back().fd = pollfds[i].fd;
+		            pollfds.back().events = POLLIN | POLLERR;
+		            pollfds.back().revents = 0;
+		            int bid = CURR_ID; 
+		            CURR_ID++;
+		            char idBUF[10];
+		            sprintf(idBUF, "%d\n", bid);
+		            write(pollfds[i].fd, idBUF,strlen(idBUF));
+		            buffer *senderBuffer = new buffer;
+		            buffs[bid] = senderBuffer;
+		            ids.push_back(bid);
+		            send.push_back(true);
+			    op.push_back(2);
+		        } else if (!strcmp(buf, "recv\0")) {
+		            printf("receiver connected\n");
+		            pollfds.push_back(pollfd());
+		            pollfds.back().fd = pollfds[i].fd;
+		            pollfds.back().events = POLLOUT | POLLERR;
+		            pollfds.back().revents = 0;
+		            read(pollfds[i].fd, &buf, 4);
+			    printf("%s\n", buf);
+		            int id = atoi(buf);
+		            ids.push_back(id);
+		            send.push_back(false);
+			    op.push_back(2);
+		        } else {
+		            perror("wrong connection target");
+		        }
+		        memset(&buf, 0, 5);
 		    }
-		    memset(&buf, 0, 5);
-		    //handle_client(cfd);
-		    //close(cfd);
-	        }
-	    }
-	}
-	int sret = poll(accfds.data(), accfds.size(), 0);
-//	printf("%d\n", sret);
-	if (sret < 0) {
-	    //error
-	    perror("poll error");
-	    exit(1);
-	} 
-	if (sret == 0) {
-//	    if (accfds.size() > 0) {
-//		printf("NO POLL");
-//	    }
-	    continue;
-	}
-	for (int i = 0; i < accfds.size(); i++) {
-	    if (send[i]) {
-		//sender
-		if (accfds[i].revents) {
-	    	    dataFromSender(accfds[i], buffs[ids[i]]);
-		}
-	    }
-	    else {
-	        //receiver
-		if (accfds[i].revents) {
-		    dataToReceiver(accfds[i], buffs[ids[i]]);
-		}
+		} else if (op[i] == 2) {
+	            if (send[i]) {
+		        //sender
+		        if (pollfds[i].revents) {
+	    	            dataFromSender(pollfds[i], buffs[ids[i]]);
+		        }
+	            } else {
+	                //receiver
+		        if (pollfds[i].revents) {
+		            dataToReceiver(pollfds[i], buffs[ids[i]]);
+		        }
+		    }
+   	            if (send[i]) {
+	   	        if (buffs[ids[i]]->senderDone) {
+		             pollfds[i].events = 0;
+		             close(pollfds[i].fd);
+		        }
+	            } else {
+		        if (buffs[ids[i]]->receiveDone) {
+		            pollfds[i].events = 0;
+		            close(pollfds[i].fd);
+		        }
+	            }
+		}   
 	    }	
-	}	
-	for (int i = 0; i < accfds.size(); i++) {
-	    if (send[i]) {
-		if (buffs[ids[i]]->senderDone) {
-		     accfds[i].events = 0;
-		     close(accfds[i].fd);
-		}
-	    } else {
-		if (buffs[ids[i]]->receiveDone) {
-		    accfds[i].events = 0;
-		    close(accfds[i].fd);
-		}
-	    }
 	}	
     }
 }

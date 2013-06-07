@@ -37,7 +37,7 @@ int pull_data(pollfd *src, s_buffer *buff, pollfd *dest) {
 	    } 
     }
 
-    if ((buff->pos > 0) && (dest->revents & POLLOUT)) {
+    if (buff->pos > 0) {// && (dest->revents & POLLOUT)) {
 	    int cnt = write(dest->fd, buff->buff, buff->pos);
 	    if (cnt < 0) {
 		buff->out_dead = true;
@@ -71,10 +71,10 @@ void handle_client(int cfd) {
 	close(aslave);
 	pollfd pfds[2];
 	pfds[0].fd = cfd;
-	pfds[0].events = POLLIN | POLLERR | POLLOUT; 
+	pfds[0].events = POLLIN | POLLERR;// | POLLOUT; 
 	pfds[0].revents = 0;
 	pfds[1].fd = amaster;
-        pfds[1].events = POLLIN | POLLERR | POLLOUT;
+        pfds[1].events = POLLIN | POLLERR;// | POLLOUT;
 	pfds[1].revents = 0;
 	int ret;
 	struct s_buffer bufftom;
@@ -95,10 +95,10 @@ void handle_client(int cfd) {
 		perror("poll error");
 	    	exit(1);
 	    }
-	    if (pfds[0].revents & POLLIN && pfds[1].revents & POLLOUT) {
+	    if (pfds[0].revents & POLLIN) {// && pfds[1].revents & POLLOUT) {
 		pull_data(&pfds[0],&bufftom,&pfds[1]);
 	    }
-	    if (pfds[1].revents & POLLIN && pfds[0].revents & POLLOUT) {
+	    if (pfds[1].revents & POLLIN) {// && pfds[0].revents & POLLOUT) {
 		pull_data(&pfds[1],&bufffrm,&pfds[0]);
 	    }
  	}
@@ -132,7 +132,7 @@ int main()
     hints.ai_family=AF_UNSPEC; //don’tcareIPv4orIPv6
     hints.ai_socktype=SOCK_STREAM;//TCPstreamsockets
     hints.ai_flags=AI_PASSIVE; //fillinmyIPforme
-    if ((status=getaddrinfo(NULL,"3493",&hints,&servinfo)) !=0){
+    if ((status=getaddrinfo(NULL,"3490",&hints,&servinfo)) !=0){
         fprintf(stderr,"getaddrinfo error:%s\n",gai_strerror(
                     status));
         exit(1);
