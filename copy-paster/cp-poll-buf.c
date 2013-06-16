@@ -26,7 +26,7 @@ int main(int argc, const char* argv[] ) {
 	//rough shit that may be working or may be not working at all
 	int num = (argc-1)/2;
 	struct stat* buf = (struct stat*)malloc(sizeof(struct stat));
-	printf("%d\n", num);
+//	printf("%d\n", num);
 	struct pollfd* fds =(struct pollfd*)malloc(sizeof(struct pollfd)*num*2);
 	int i;
 	struct s_buff *buffs = (struct s_buff*)malloc(sizeof(struct s_buff)*num);
@@ -37,13 +37,13 @@ int main(int argc, const char* argv[] ) {
 		fds[2*i+1].events = POLLOUT;
 		buffs[i].in_dead = 0;
 		buffs[i].pos = 0;
-		printf("From fd %d to %d\n", fds[2*i].fd, fds[2*i+1].fd);
+//		printf("From fd %d to %d\n", fds[2*i].fd, fds[2*i+1].fd);
 	}
         
 	int parsed = 0;
 	int res;
 	while (parsed < num) {
-		printf("inb4 poll\n");
+//		printf("inb4 poll\n");
 		res = poll(fds,num*2,-1);
 		if (res <= 0) {
 			//errors
@@ -76,9 +76,9 @@ int main(int argc, const char* argv[] ) {
 					parsed++;
 				}
 			}
-			printf("pass, parsed %d\n", parsed);
+//			printf("pass, parsed %d\n", parsed);
 		}
 	}
-	printf("done");
+//	printf("done");
 	return 0;
 }

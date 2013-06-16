@@ -8,6 +8,13 @@
 #include <sys/stat.h>
 
 #define MAX_EVENTS 10
+#define BUF_SIZE 1024
+
+struct s_buff {
+    char buff[BUF_SIZE];
+    size_t pos;
+    int in_dead;
+};
 
 int main(int argc, const char* argv[]) {
     int num = (argc-1)/2;
@@ -15,7 +22,7 @@ int main(int argc, const char* argv[]) {
     printf("%d\n", num);
     int efd, i, s, fd;
     struct epoll_event event;
-    struct epoll_events *events;
+    struct epoll_event *events;
 
     efd = epoll_create1(0);
     if (efd == -1) {
@@ -25,7 +32,9 @@ int main(int argc, const char* argv[]) {
 
     for (i = 0; i < num; i++) {
 	fd = atoi(argv[2*i+1]);
+	struct s_buff* buffer =(struct s_buff*) malloc(sizeof(struct s_buff));
 	event.data.fd = fd;
+	event.data.ptr = buffer;
 	event.events = EPOLLIN;
 	s = epoll_ctl(efd, EPOLL_CTL_ADD, fd, &event);
 	if (s == -1) {
@@ -35,6 +44,7 @@ int main(int argc, const char* argv[]) {
 	fd = atoi(argv[2*i+2]);
 	event.data.fd = fd;
 	event.events = EPOLLOUT;
+	event.data.ptr = buffer;
 	s = epoll_ctl(efd, EPOLL_CTL_ADD, fd, &event);
 	if (s == -1) {
 	    perror("epoll_ctl 2");
@@ -47,17 +57,39 @@ int main(int argc, const char* argv[]) {
     int parsed = 0;
 
     while (parsed < num) {
-	int n;
+	int n, i;
 	n = epoll_wait(efd, events, MAX_EVENTS, -1);
-	/*now events contains fds with events, but how do we go throught
-	 *them, in poll they are all sorted in correct order, and we could
-	 *check them in pairs, but epoll doesn't specify order, i think
-	 *we can try doing it in a poll way, by creating an array of
-	 *bool ready[], where we fill true if fd is ready, but then we 
-	 *lose the advantage of epoll, that is, not having to linearly 
-	 *go through pollfds and check revents.
-	 *ofc we can put additional data into our epoll structure for each fd
-	 *but atm I don't see the way it will help, knowing your sibling fd
-	 *(the one you have to read or write to) does not seem to help */
-    }	
+	for (i = 0; i < n; i++) {
+	    if (events[i].events & EPOLLIN) {
+	    	//some fd is ready for read
+	    	struct s_buff* buff = (struct s_buff*) events[i].data.ptr;
+	    	if (buff->pos < BUF_SIZE) {
+		    int cnt = read(events[i].data.fd, buff->buff + buff->pos, BUF_SIZE - buff->pos);
+		    if (cnt <= 0) {
+		    	buff->in_dead = 1;
+		    	//close(events[i].data.fd);
+			epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, &event);
+		    } else {
+		    	buff->pos+=cnt;
+		    }
+	    	}	 
+	    } else if (events[i].events & EPOLLOUT) {
+	    	struct s_buff* buff = (struct s_buff*) events[i].data.ptr;
+	   	 if (buff->pos > 0) {
+		    int cnt = write(events[i].data.fd, buff->buff, buff->pos);
+		    if (cnt > 0) {
+		    	memmove(buff->buff, buff->buff+cnt, buff->pos - cnt);
+		    }
+		    buff->pos -= cnt;
+	    	}
+	    	if (buff->pos == 0 && buff->in_dead) {
+		    //close(events[i].data.fd);
+		    epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, &event);
+		    parsed++;
+		}
+    	    }
+	}
+    }
+    free(events);
+    return 0;	
 }
