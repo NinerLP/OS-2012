@@ -29,6 +29,7 @@ void readTZ(int sockfd) {
     }	
     cnt = read(sockfd, sbuf, 40);
     expected_size = atoi(sbuf);
+    int wfile = open("downloaded", O_CREAT);
     while (!done) {
 	int cnt = read(sockfd, buffer, BUF_SIZE);
 	write(1, buffer, cnt);

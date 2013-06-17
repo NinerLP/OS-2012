@@ -59,13 +59,21 @@ int read_from_buf(s_buffer* buf, int fd) {
 }
 
 void handle_client(int cfd) {
-	char filename[FNAME_LEN];
+	char filename[FNAME_LEN+1];
 	//printf("dir: ");
 	//printf(get_current_dir_name());
 	//printf("\n");
 	read(cfd, &filename, FNAME_LEN);
+	int ps = 0;
 	//printf(filename); printf("\n");
-	
+/*	while (!strcmp(filename, '\0')) {
+		int rd = read(cfd, &filename+ps, FNAME_LEN - ps);
+		if (rd < FNAME_LEN) {
+			ps += rd;
+		}
+		printf(filename);
+		printf("\n");
+	}*/
 	struct stat* sbuf = (struct stat*) malloc(sizeof(struct stat));
 	char message[2];
 	int fd = open(filename, O_RDONLY);	
