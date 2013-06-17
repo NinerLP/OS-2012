@@ -67,9 +67,11 @@ void handle_client(int cfd) {
 	//printf(filename); printf("\n");
 	
 	struct stat* sbuf = (struct stat*) malloc(sizeof(struct stat));
-	
+	char message[2];
 	int fd = open(filename, O_RDONLY);	
 if (fd < 0) {
+		message[0] = 'E'; message[1] = 'R';
+		write(cfd, message, 2);
 		write(cfd, strerror(errno),strlen(strerror(errno)));
 		close(cfd);
 		return;
@@ -77,10 +79,11 @@ if (fd < 0) {
 	//writing
 	fstat(fd,sbuf);
 	s_buffer* buf =(s_buffer*) malloc(BUF_SIZE);
-	
+	message[0] = 'O'; message[1] = 'K';
 	char sizeBUF[40];
 	memset(&sizeBUF,0,40);
 	sprintf(sizeBUF,"%d\0",sbuf->st_size);
+	write(cfd,message,2);
 	write(cfd,sizeBUF,40);
 
 	int cnt = 1;

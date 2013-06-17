@@ -11,19 +11,28 @@
 #define BUF_SIZE 1024
 
 void readTZ(int sockfd) {
-   printf("Start reading\n");
+//   printf("Start reading\n");
     bool done = false;
+    char message[2];
     //int fd = open("result.file", O_CREATE);
     int read_size = 0;
     int expected_size;
     char sbuf[40];
-    int cnt = read(sockfd, sbuf, 40);
-    expected_size = atoi(sbuf);
     char buffer[BUF_SIZE];
+    int cnt = read(sockfd, message, 2);
+    if (cnt < 2 || strcmp(message,"ER")) {
+	//error
+	cnt = read(sockfd, buffer, BUF_SIZE);
+	write(1, buffer, cnt);
+	printf("\n");
+	return;
+    }	
+    cnt = read(sockfd, sbuf, 40);
+    expected_size = atoi(sbuf);
     while (!done) {
 	int cnt = read(sockfd, buffer, BUF_SIZE);
 	write(1, buffer, cnt);
-	printf("read %d\n", cnt);
+//	printf("read %d\n", cnt);
 	read_size += cnt;
 	//for (int i = 0; i < cnt; i++) {
 	//    if (buffer[i] == '\0') {
@@ -36,9 +45,9 @@ void readTZ(int sockfd) {
     }
 	printf("READ: %d EXPECTED: %d\n",read_size, expected_size);
     if (read_size == expected_size) {
-	printf("Download OK");
+	printf("Download OK\n");
     } else {
-	printf("Donwload failed");
+	printf("Donwload failed\n");
     }
 }
 
