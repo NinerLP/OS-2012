@@ -38,7 +38,7 @@ public:
 };
 
 int main() {
- /*   	int dpid = fork();
+    	int dpid = fork();
     	if (dpid != 0) {
         	waitpid(dpid, NULL, 0);
         	exit(0);
@@ -47,7 +47,7 @@ int main() {
 	if (sid < 0) {
 		perror("session creation error");
 		exit(1);
-    	}*/
+    	}
     	struct addrinfo hints;
     	struct addrinfo *servinfo;
     	int status;
@@ -125,7 +125,9 @@ int main() {
 			if (pollfds[i].revents & (POLLERR | POLLHUP | POLLRDHUP | POLLNVAL)) {
 				pollfds[i].events = 0;
 				close(fds[i]);
-				_exit(1);
+				pollfds.erase(pollfds.begin()+i);
+				clients.erase(clients.begin()+i);
+		//		_exit(1);
 			}	
 			if (pollfds[i].revents & POLLIN && clients[i]->socket) {
 				int cfd = accept(fds[i], NULL, NULL);
@@ -157,7 +159,7 @@ int main() {
 					}
 					resp += "\n";
 					clients[i]->messageQueue.push(resp);
-					pollfds[i].events = POLLIN | POLLOUT;
+					pollfds[i].events = POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP | POLLNVAL;
 				} else if (stmess.substr(0,3) == "sub") {
 					string signame = stmess.substr(4,6);
 					printf("Client subscribed to %s\n", signame.c_str());
