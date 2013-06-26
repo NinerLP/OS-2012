@@ -76,7 +76,7 @@ int epollfd::subscribe(int fd, __uint32_t what, std::function<void(void)> cont) 
 			//can't do something with map cancel epoll op
 			int s = epoll_ctl(efd,EPOLL_CTL_DEL,fd, NULL);
 			if (s == -1) {
-				throw epollfdException("something terible occured in epoll add new");
+				throw epollfdException("something terrible occured in epoll add new");
 			}
 		}
 	}
@@ -110,6 +110,7 @@ int epollfd::unsubscribe(int fd, __uint32_t what) {
 void epollfd::cycle() {
 	int n = epoll_wait(efd, events, MAX_EVENTS, -1);
 	for (int i = 0; i < n; i++) {
+		//to do : insert unsubscribes here
 		int rfd = events[i].data.fd;
 		if (events[i].events & EPOLLIN) {
 			speshulMap.at(std::make_pair(rfd, EPOLLIN))();

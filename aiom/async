@@ -1,0 +1,14 @@
+async_read
+async_write
+async_... fucking forgot already
+
+construct (epollfd, fd, continuation) 
+	polled = false;
+	epollfd.subscribe(fd, POLLIN | WRITE | WHATEVS..., !!! this.speshulContinuation)
+	blahblahblah
+
+this.speshulContinuation()
+	polled = true (!!!)
+	continuation()
+
+
