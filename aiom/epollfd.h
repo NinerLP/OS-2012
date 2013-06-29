@@ -1,3 +1,6 @@
+#ifndef __EPOLLFD_H_
+#define __EPOLLFD_H_
+
 #include <exception>
 #include <unistd.h>
 #include <sys/epoll.h>
@@ -108,30 +111,39 @@ int epollfd::unsubscribe(int fd, __uint32_t what) {
 }
 
 void epollfd::cycle() {
-	int n = epoll_wait(efd, events, MAX_EVENTS, -1);
+	int n = epoll_wait(efd, events, MAX_EVENTS, 0);
 	for (int i = 0; i < n; i++) {
 		//to do : insert unsubscribes here
 		int rfd = events[i].data.fd;
 		if (events[i].events & EPOLLIN) {
 			speshulMap.at(std::make_pair(rfd, EPOLLIN))();
+			unsubscribe(rfd, EPOLLIN);
 		}
 		if (events[i].events & EPOLLOUT) {
 			speshulMap[std::make_pair(rfd, EPOLLOUT)]();
+			unsubscribe(rfd, EPOLLOUT);
 		}
 		if (events[i].events & EPOLLRDHUP) {
 			speshulMap[std::make_pair(rfd, EPOLLRDHUP)]();
+			unsubscribe(rfd, EPOLLRDHUP);
 		}
 		if (events[i].events & EPOLLPRI) {
 			speshulMap[std::make_pair(rfd, EPOLLPRI)]();
+			unsubscribe(rfd, EPOLLPRI);
 		}
 		if (events[i].events & EPOLLERR) {
 			speshulMap[std::make_pair(rfd, EPOLLERR)]();
+			unsubscribe(rfd, EPOLLERR);
 		}
 		if (events[i].events & EPOLLHUP) {
 			speshulMap[std::make_pair(rfd, EPOLLHUP)]();
+			unsubscribe(rfd, EPOLLHUP);
 		}
 		if (events[i].events & EPOLLET) {
 			speshulMap[std::make_pair(rfd, EPOLLET)]();
+			unsubscribe(rfd, EPOLLET);
 		}
 	}
 }
+
+#endif
